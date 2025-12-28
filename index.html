@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Tape Canvas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #1a1a1a;
+        }
+
+        canvas {
+            display: block;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // ====== CONFIGURATION ======
+        const CONFIG = {
+            tapeWidthMinCap: 20,
+            tapeWidthMaxCapRatio: 0.25,
+            animationSpeed: 16
+        };
+
+        function getRandomTapeWidth() {
+            const maxWidth = canvas.width * CONFIG.tapeWidthMaxCapRatio;
+            const minWidth = CONFIG.tapeWidthMinCap;
+            return minWidth + Math.random() * (maxWidth - minWidth);
+        }
+
+        // ====== CANVAS SETUP ======
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // ====== TAPE GENERATOR ======
+        class TapeGenerator {
+            static getRandomColor(clickX, clickY) {
+                // Use click position to influence color generation
+                const r = Math.floor((clickX / canvas.width) * 255);
+                const g = Math.floor((clickY / canvas.height) * 255);
+                const b = Math.floor(((clickX + clickY) / (canvas.width + canvas.height)) * 255);
+
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+
+            static getRandomOrientation() {
+                return Math.random() < 0.5 ? 'horizontal' : 'vertical';
+            }
+
+            static getRandomDirection(orientation) {
+                if (orientation === 'horizontal') {
+                    return Math.random() < 0.5 ? 'left-to-right' : 'right-to-left';
+                } else {
+                    return Math.random() < 0.5 ? 'top-to-bottom' : 'bottom-to-top';
+                }
+            }
+
+            static getRandomPosition(orientation, tapeWidth) {
+                if (orientation === 'horizontal') {
+                    const minPos = tapeWidth / 2;
+                    const maxPos = canvas.height - tapeWidth / 2;
+                    return minPos + Math.random() * (maxPos - minPos);
+                } else {
+                    const minPos = tapeWidth / 2;
+                    const maxPos = canvas.width - tapeWidth / 2;
+                    return minPos + Math.random() * (maxPos - minPos);
+                }
+            }
+
+            static create(clickX, clickY) {
+                const orientation = this.getRandomOrientation();
+                const direction = this.getRandomDirection(orientation);
+                const tapeWidth = getRandomTapeWidth();
+                const centerPos = this.getRandomPosition(orientation, tapeWidth);
+                const color = this.getRandomColor(clickX, clickY);
+
+                let startPos, endPos;
+
+                if (orientation === 'horizontal') {
+                    startPos = direction === 'left-to-right' ? -tapeWidth : canvas.width;
+                    endPos = direction === 'left-to-right' ? canvas.width : -tapeWidth;
+                } else {
+                    startPos = direction === 'top-to-bottom' ? -tapeWidth : canvas.height;
+                    endPos = direction === 'top-to-bottom' ? canvas.height : -tapeWidth;
+                }
+
+                return {
+                    orientation,
+                    direction,
+                    centerPos,
+                    color,
+                    tapeWidth,
+                    currentPos: startPos,
+                    endPos,
+                    speed: CONFIG.animationSpeed * (startPos < endPos ? 1 : -1)
+                };
+            }
+        }
+
+        // ====== TAPE RENDERER ======
+        class TapeRenderer {
+            static draw(tape) {
+                ctx.fillStyle = tape.color;
+
+                if (tape.orientation === 'horizontal') {
+                    const startY = tape.centerPos - tape.tapeWidth / 2;
+                    ctx.fillRect(
+                        tape.currentPos,
+                        startY,
+                        tape.tapeWidth,
+                        tape.tapeWidth
+                    );
+                } else {
+                    const startX = tape.centerPos - tape.tapeWidth / 2;
+                    ctx.fillRect(
+                        startX,
+                        tape.currentPos,
+                        tape.tapeWidth,
+                        tape.tapeWidth
+                    );
+                }
+            }
+        }
+
+        // ====== ANIMATION MANAGER ======
+        class AnimationManager {
+            constructor() {
+                this.isAnimating = false;
+                this.currentTape = null;
+            }
+
+            start(tape) {
+                this.isAnimating = true;
+                this.currentTape = tape;
+                this.animate();
+            }
+
+            animate() {
+                if (!this.currentTape) return;
+
+                this.currentTape.currentPos += this.currentTape.speed;
+
+                TapeRenderer.draw(this.currentTape);
+
+                const isComplete = this.currentTape.speed > 0
+                    ? this.currentTape.currentPos >= this.currentTape.endPos
+                    : this.currentTape.currentPos <= this.currentTape.endPos;
+
+                if (isComplete) {
+                    this.isAnimating = false;
+                    this.currentTape = null;
+                } else {
+                    requestAnimationFrame(() => this.animate());
+                }
+            }
+        }
+
+        // ====== MAIN APPLICATION ======
+        const animationManager = new AnimationManager();
+
+        canvas.addEventListener('click', (e) => {
+            if (animationManager.isAnimating) {
+                return; // Ignore clicks during animation
+            }
+
+            const tape = TapeGenerator.create(e.clientX, e.clientY);
+            animationManager.start(tape);
+        });
+
+        // Initial background
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    </script>
+</body>
+</html>
