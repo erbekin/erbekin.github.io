@@ -1,0 +1,7 @@
+{{ $src := .Get "src" }}
+{{ $height := default "420" (.Get "height") }}
+{{ $title := default "Interactive demo" (.Get "title") }}
+<figure class="demo-embed">
+  <iframe src="{{ $src | relURL }}" title="{{ $title }}" style="height: {{ $height }}px;" loading="lazy"></iframe>
+  <figcaption><a href="{{ $src | relURL }}" target="_blank" rel="noopener">open demo in new tab ↗</a></figcaption>
+</figure>

@@ -7,6 +7,7 @@
   <meta name="description" content="{{ with .Params.summary }}{{ . }}{{ else }}{{ site.Params.bio }}{{ end }}">
   <link rel="icon" type="image/svg+xml" href="{{ "favicon.svg" | relURL }}">
   <link rel="stylesheet" href="{{ "css/style.css" | relURL }}">
+  <link rel="stylesheet" href="{{ "css/syntax.css" | relURL }}">
   {{ range .AlternativeOutputFormats }}<link rel="{{ .Rel }}" type="{{ .MediaType.Type }}" href="{{ .Permalink }}" title="{{ site.Title }}">
   {{ end }}
 </head>
