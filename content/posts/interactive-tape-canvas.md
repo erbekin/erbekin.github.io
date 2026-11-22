@@ -1,6 +1,6 @@
 +++
 title = 'Interactive Tape Canvas'
-date = 2026-11-22T18:52:00+03:00
+date = 2026-11-22T18:32:00+03:00
 draft = false
 tags = ['javascript', 'canvas', 'web']
 summary = "A small canvas experiment: click to shoot a colored tape across the screen."
