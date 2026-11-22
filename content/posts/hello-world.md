@@ -3,10 +3,10 @@ title = 'Hello World'
 date = 2026-11-22T18:31:00+03:00
 draft = false
 tags = ['meta', 'hugo']
-summary = "The blog is now a Hugo static site with a retro CRT terminal theme."
+summary = "This blog is now a minimal Hugo static site."
 +++
 
-Welcome! This site is now built with [Hugo](https://gohugo.io/), styled like a green-phosphor terminal.
+Welcome! This site is built with [Hugo](https://gohugo.io/) and kept deliberately plain: text, a few links, nothing else.
 
 ## How it works
 

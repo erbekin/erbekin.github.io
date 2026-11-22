@@ -1,13 +1,8 @@
 {{ define "main" }}
-<div>
-  <div class="prompt-line"><span class="prompt">$</span><span class="command">ls -la ./{{ .Data.Plural }}/</span></div>
-  <div class="output">
-    <ul class="tag-list">
-      {{ range .Data.Terms.Alphabetical }}
-        <li><a class="tag-badge" href="{{ .Page.RelPermalink }}">#{{ .Page.Title }} ({{ .Count }})</a></li>
-      {{ end }}
-    </ul>
-  </div>
-</div>
-<div class="prompt-line"><span class="prompt">$</span><span class="cursor" aria-hidden="true"></span></div>
+<h1>{{ .Title }}</h1>
+<ul class="tag-list">
+  {{ range .Data.Terms.Alphabetical }}
+    <li><a href="{{ .Page.RelPermalink }}">#{{ .Page.Title }}</a> <span class="muted">({{ .Count }})</span></li>
+  {{ end }}
+</ul>
 {{ end }}

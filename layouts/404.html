@@ -1,10 +1,4 @@
 {{ define "main" }}
-<div>
-  <div class="prompt-line"><span class="prompt">$</span><span class="command">cat requested_file</span></div>
-  <div class="output">
-    <span class="output-value">bash: 404: No such file or directory</span>
-    <a href="{{ "/" | relURL }}">$ cd ~/home</a>
-  </div>
-</div>
-<div class="prompt-line"><span class="prompt">$</span><span class="cursor" aria-hidden="true"></span></div>
+<h1>404 — Page not found</h1>
+<p><a href="{{ "/" | relURL }}">← Back to home</a></p>
 {{ end }}

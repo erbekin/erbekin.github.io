@@ -1,33 +1,9 @@
 {{ define "main" }}
-{{ $posts := where site.RegularPages "Section" "posts" }}
-
-<div>
-  <div class="prompt-line"><span class="prompt">$</span><span class="command">whoami</span></div>
-  <div class="output">
-    <span class="output-value">{{ site.Params.author }}</span>
-    <span>{{ site.Params.bio }}</span>
-  </div>
-</div>
-
-<div>
-  <div class="prompt-line"><span class="prompt">$</span><span class="command">cat status.txt</span></div>
-  <div class="output">
-    <span class="output-value">{{ site.Params.status }}</span>
-    <span>posts: <code>{{ len $posts }}</code></span>
-  </div>
-</div>
-
-<div>
-  <div class="prompt-line"><span class="prompt">$</span><span class="command">ls -la ./posts/</span></div>
-  <div class="output">
-    <ul class="post-list">
-      {{ range first 10 $posts }}
-        {{ partial "post-item.html" . }}
-      {{ end }}
-    </ul>
-    <a href="{{ "posts/" | relURL }}">... all posts</a>
-  </div>
-</div>
-
-<div class="prompt-line"><span class="prompt">$</span><span class="cursor" aria-hidden="true"></span></div>
+<p class="intro">Hi, I'm <strong>{{ site.Params.author }}</strong> — {{ site.Params.bio }}.</p>
+<h2>Posts</h2>
+<ul class="post-list">
+  {{ range first 10 (where site.RegularPages "Section" "posts") }}
+    {{ partial "post-item.html" . }}
+  {{ end }}
+</ul>
 {{ end }}
