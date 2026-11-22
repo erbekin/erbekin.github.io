@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LCG loop demo</title>
+<style>
+  :root {
+    --bg: #fcfcfa; --text: #1c1c1c; --muted: #6e6e6e; --accent: #0050b3;
+    --border: #d4d4d0; --tail: #e0a030; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151515; --text: #e4e4e4; --muted: #909090; --accent: #6eb5ff; --border: #3a3a3a; --tail: #d9a441; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0.75rem; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--text); background: var(--bg); }
+  .controls { display: flex; flex-wrap: wrap; gap: 0.5rem 0.9rem; align-items: center; margin-bottom: 0.5rem; }
+  label { display: flex; gap: 0.3rem; align-items: center; font-family: var(--mono); }
+  input { width: 4.2rem; font: inherit; color: var(--text); background: transparent; border: 1px solid var(--border); padding: 0.1rem 0.3rem; }
+  button { font: inherit; color: var(--text); background: transparent; border: 1px solid var(--border); padding: 0.15rem 0.6rem; cursor: pointer; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  .presets { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+  .presets span { color: var(--muted); }
+  svg { display: block; width: 100%; max-width: 380px; height: auto; margin: 0 auto; }
+  .node { fill: none; stroke: var(--border); stroke-width: 1.2; cursor: pointer; }
+  .node.tail { fill: var(--tail); stroke: var(--tail); fill-opacity: .35; }
+  .node.cycle { fill: var(--accent); stroke: var(--accent); fill-opacity: .3; }
+  .node.start { stroke-width: 3; }
+  .label { fill: var(--text); font: 11px var(--mono); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .edge { fill: none; stroke-width: 1.6; }
+  .edge.tail { stroke: var(--tail); stroke-dasharray: 4 3; }
+  .edge.cycle { stroke: var(--accent); stroke-width: 2.2; }
+  .info { font-family: var(--mono); margin-top: 0.5rem; }
+  .info div { margin: 0.15rem 0; word-break: break-word; }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="controls">
+  <label>m <input id="m" type="number" min="2" max="64" value="16"></label>
+  <label>a <input id="a" type="number" min="0" max="999" value="5"></label>
+  <label>c <input id="c" type="number" min="0" max="999" value="3"></label>
+  <label>x₀ <input id="x0" type="number" min="0" value="0"></label>
+  <button id="animate">animate</button>
+</div>
+<div class="presets" id="presets"><span>presets:</span></div>
+<svg id="ring" viewBox="-190 -190 380 380" role="img" aria-label="LCG state graph"></svg>
+<div class="info" id="info"></div>
+<p class="muted">Xₙ₊₁ = (a·Xₙ + c) mod m &mdash; click a node to use it as x₀.</p>
+
+<script>
+const $ = id => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+const PRESETS = [
+  { name: "full period",  m: 16, a: 5, c: 3, x0: 0 },
+  { name: "short loop",   m: 16, a: 3, c: 0, x0: 1 },
+  { name: "tail + 2-cycle", m: 12, a: 2, c: 0, x0: 1 },
+  { name: "fixed point",  m: 12, a: 4, c: 3, x0: 2 },
+];
+let animTimer = null, shown = Infinity;
+
+function params() {
+  const m = Math.min(64, Math.max(2, parseInt($("m").value) || 2));
+  const a = Math.max(0, parseInt($("a").value) || 0);
+  const c = Math.max(0, parseInt($("c").value) || 0);
+  const x0 = ((parseInt($("x0").value) || 0) % m + m) % m;
+  return { m, a, c, x0 };
+}
+
+function trajectory({ m, a, c, x0 }) {
+  const seen = new Map(), seq = [];
+  let x = x0;
+  while (!seen.has(x)) { seen.set(x, seq.length); seq.push(x); x = (a * x + c) % m; }
+  const s = seen.get(x);
+  return { seq, next: x, tail: seq.slice(0, s), loop: seq.slice(s) };
+}
+
+function pos(i, m, r) {
+  const t = (i / m) * 2 * Math.PI - Math.PI / 2;
+  return [r * Math.cos(t), r * Math.sin(t)];
+}
+
+function el(name, attrs, parent) {
+  const e = document.createElementNS(NS, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+function render() {
+  const p = params(), { m } = p;
+  const tr = trajectory(p);
+  const svg = $("ring");
+  svg.innerHTML = "";
+  const R = 160, nr = Math.max(9, Math.min(16, 300 / m));
+
+  const defs = el("defs", {}, svg);
+  for (const kind of ["tail", "cycle"]) {
+    const mk = el("marker", { id: "ar-" + kind, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" }, defs);
+    el("path", { d: "M0 0L10 5L0 10z", fill: kind === "tail" ? "var(--tail)" : "var(--accent)" }, mk);
+  }
+
+  const kindOf = new Map();
+  tr.tail.forEach(v => kindOf.set(v, "tail"));
+  tr.loop.forEach(v => kindOf.set(v, "cycle"));
+
+  // edges for visited path (limited by animation progress)
+  const edges = [];
+  for (let i = 0; i < tr.seq.length; i++) {
+    const from = tr.seq[i], to = i + 1 < tr.seq.length ? tr.seq[i + 1] : tr.next;
+    edges.push({ from, to, kind: i < tr.tail.length ? "tail" : "cycle", i });
+  }
+  for (const e of edges) {
+    if (e.i >= shown) break;
+    const [x1, y1] = pos(e.from, m, R), [x2, y2] = pos(e.to, m, R);
+    if (e.from === e.to) {
+      const ox = x1 * 1.0, oy = y1 * 1.0, k = 1.5;
+      el("path", { d: `M${x1 + nr * 0.6} ${y1 - nr * 0.6} C ${ox * k + 30} ${oy * k - 30}, ${ox * k - 30} ${oy * k + 30}, ${x1 - nr * 0.6} ${y1 + nr * 0.6}`, class: "edge " + e.kind, "marker-end": `url(#ar-${e.kind})` }, svg);
+      continue;
+    }
+    const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy);
+    const ux = dx / d, uy = dy / d;
+    const sx = x1 + ux * nr, sy = y1 + uy * nr, ex = x2 - ux * (nr + 4), ey = y2 - uy * (nr + 4);
+    // slight curve so 2-cycles don't overlap
+    const cx = (sx + ex) / 2 - uy * 14, cy = (sy + ey) / 2 + ux * 14;
+    el("path", { d: `M${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`, class: "edge " + e.kind, "marker-end": `url(#ar-${e.kind})` }, svg);
+  }
+
+  for (let v = 0; v < m; v++) {
+    const [x, y] = pos(v, m, R);
+    const idx = tr.seq.indexOf(v);
+    const k = idx !== -1 && idx < shown ? kindOf.get(v) : "";
+    const circle = el("circle", { cx: x, cy: y, r: nr, class: `node ${k} ${v === p.x0 ? "start" : ""}` }, svg);
+    circle.addEventListener("click", () => { $("x0").value = v; update(); });
+    const t = el("text", { x, y, class: "label" }, svg);
+    t.textContent = v;
+  }
+
+  const info = $("info");
+  const fmt = arr => arr.join(" → ");
+  const entry = tr.loop[0];
+  info.innerHTML =
+    `<div>period: <b>${tr.loop.length}</b> / ${m} states &middot; tail: <b>${tr.tail.length}</b> &middot; entry state: <b>${entry}</b></div>` +
+    `<div>${tr.tail.length ? fmt(tr.tail) + " → " : ""}↻ [ ${fmt(tr.loop)} ]</div>` +
+    `<div class="muted">full period (Hull–Dobell): ${hullDobell(p) ? "yes" : "no"}</div>`;
+}
+
+function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+function hullDobell({ m, a, c }) {
+  if (gcd(c, m) !== 1) return false;
+  let n = m;
+  for (let q = 2; q <= n; q++) {
+    if (n % q === 0) {
+      if ((a - 1) % q !== 0) return false;
+      while (n % q === 0) n /= q;
+    }
+  }
+  return m % 4 !== 0 || (a - 1) % 4 === 0;
+}
+
+function update() { stopAnim(); shown = Infinity; render(); }
+function stopAnim() { clearInterval(animTimer); animTimer = null; }
+
+$("animate").addEventListener("click", () => {
+  stopAnim();
+  const total = trajectory(params()).seq.length;
+  shown = 0; render();
+  animTimer = setInterval(() => {
+    shown++; render();
+    if (shown >= total) stopAnim();
+  }, 450);
+});
+
+for (const id of ["m", "a", "c", "x0"]) $(id).addEventListener("input", update);
+
+for (const pr of PRESETS) {
+  const b = document.createElement("button");
+  b.textContent = pr.name;
+  b.addEventListener("click", () => { for (const k of ["m", "a", "c", "x0"]) $(k).value = pr[k]; update(); });
+  $("presets").appendChild(b);
+}
+
+render();
+</script>
+</body>
+</html>
