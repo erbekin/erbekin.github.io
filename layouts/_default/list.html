@@ -1,0 +1,13 @@
+{{ define "main" }}
+<div>
+  <div class="prompt-line"><span class="prompt">$</span><span class="command">ls -la .{{ .RelPermalink }}</span></div>
+  <div class="output">
+    <ul class="post-list">
+      {{ range .Pages }}
+        {{ partial "post-item.html" . }}
+      {{ end }}
+    </ul>
+  </div>
+</div>
+<div class="prompt-line"><span class="prompt">$</span><span class="cursor" aria-hidden="true"></span></div>
+{{ end }}
